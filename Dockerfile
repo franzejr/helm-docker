@@ -1,13 +1,13 @@
 FROM alpine:3.6
 
-ENV VERSION v3.0.0-beta.2
+ENV VERSION v2.9.1
 
 MAINTAINER Trevor Hartman <trevorhartman@gmail.com>
 
 WORKDIR /
 
 # Enable SSL
-RUN apk --update add ca-certificates wget python curl tar jq
+RUN apk --update add ca-certificates wget python curl tar
 
 # Install gcloud and kubectl
 # kubectl will be available at /google-cloud-sdk/bin/kubectl
@@ -25,9 +25,6 @@ RUN google-cloud-sdk/bin/gcloud config set --installation component_manager/disa
 ENV FILENAME helm-${VERSION}-linux-amd64.tar.gz
 ENV HELM_URL https://storage.googleapis.com/kubernetes-helm/${FILENAME}
 
-
-RUN echo $HELM_URL
-
 RUN curl -o /tmp/$FILENAME ${HELM_URL} \
   && tar -zxvf /tmp/${FILENAME} -C /tmp \
   && mv /tmp/linux-amd64/helm /bin/helm \
@@ -37,20 +34,8 @@ RUN curl -o /tmp/$FILENAME ${HELM_URL} \
 # helm-diff requires bash, curl
 RUN apk --update add git bash
 
-# Install envsubst [better than using 'sed' for yaml substitutions]
-ENV BUILD_DEPS="gettext"  \
-    RUNTIME_DEPS="libintl"
-
-RUN set -x && \
-    apk add --update $RUNTIME_DEPS && \
-    apk add --virtual build_deps $BUILD_DEPS &&  \
-    cp /usr/bin/envsubst /usr/local/bin/envsubst && \
-    apk del build_deps
-
 # Install Helm plugins
 RUN helm init --client-only
-# workaround for an issue in updating the binary of `helm-diff`
-ENV HELM_PLUGIN_DIR /.helm/plugins/helm-diff
 # Plugin is downloaded to /tmp, which must exist
 RUN mkdir /tmp
 RUN helm plugin install https://github.com/viglesiasce/helm-gcs.git
